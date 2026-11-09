@@ -26,14 +26,55 @@ docstringには、確認問題・復習問題・クイズを求められたと�
 
 ## 宿題
 
-- 取り組んだレベル：基礎
+- 取り組んだレベル：発展
 - やったこと：
-app/agent.pyのINSTRUCTIONSを修正、質問によってmake_quizあるいはget_lecture_summaryが呼ばれることを確認
+演習版で作成したエージェントと同じ `INSTRUCTIONS` およびツールを利用し、
+エージェントを組み立てる部分を Google ADK で実装した。
+
+新しく次のファイルを作成した。
+
+- `adk_agent/glossary_agent/__init__.py`
+- `adk_agent/glossary_agent/agent.py`
+
+`adk_agent/glossary_agent/agent.py` では、`google.adk.agents.Agent` を使って
+`root_agent` を作成した。演習版の `INSTRUCTIONS` と、以下のツールを再利用した。
+- `search_glossary`
+- `get_lecture_summary`
+- `make_quiz`
+ADK版では、演習版の `agent.tool_plain(...)` の代わりに、
+`Agent` の生成時に `tools=[...]` としてツールのリストを渡した。
+ADK版は、次のコマンドで起動した。
+
+PYTHONPATH=. uv run --with google-adk adk run adk_agent/glossary_agent
+
 - 結果：
-1度get_lecture_summaryが使われると、以降条件を変えてもget_lecture_summaryが使われる事があった。
-INSTRUCTIONSを変更し、同じ質問をしたところmake_quizが使われた。
+ADKの対話画面で、演習版と同じ質問を実行した。
+「第2回の内容から確認問題を1問出して」
+その結果、次のような確認問題が生成された。
+「エポック」とは何ですか？
+ADK版でも、第2回に関する確認問題を生成できることを確認した。
+また、ADKのログには、次のようにモデルへのリクエストとレスポンスが2組記録された。
+Sending out request ... gemini-3.1-flash-lite
+Response received from the model.
+Sending out request ... gemini-3.1-flash-lite
+Response received from the model.
+演習版では、--trace に次のツール呼び出しが表示された。
+[tool call] make_quiz({'lecture': 2})
+一方、ADK版の通常の対話画面では、演習版のような [tool call] の表示は確認できなかった。ただし、ADK版でも同じ質問に対して 確認問題を生成できた。
+
 - 気づき・疑問：
-今回INSTRUCTIONSには「確認問題や復習問題、クイズを求められたら、必ず make_quiz を使う。」を追記。
-2行目に「ただし、”講義内容に即した”という文言が存在した場合、make_quizではなくget_lecture_summaryを使う。」を追記。
-プロンプトを"第2回の内容から講義内容に即した確認問題を1問出して"とした場合、想定通りget_lecture_summaryを使用したが、その後"第2回の内容から確認問題を1問出して"としてもget_lecture_summaryを使用した。
-Quriにいろいろ相談して、LLMは「説明文同士の相対的な強さと、モデルの確率的な判断」で使用するツールを決めた、と結論を得たが、指示文内競合時の相対的な強さは事前学習によるものだろうから様々な質問をして確認してみたい。
+演習版では、pydantic_ai.Agent を作成したあと、 agent.tool_plain(...) を使ってツールを個別に登録していた。
+一方、ADK版では、google.adk.agents.Agent の生成時に、
+tools=[
+    tools.search_glossary,
+    tools.get_lecture_summary,
+    tools.make_quiz,
+]
+のように、ツールをリストで渡していた。
+また、演習版では独自に実装した --trace によって、
+[tool call] make_quiz({'lecture': 2})
+のように、ツール名と引数を確認できた。
+ADK版では同じ形式のトレース表示はなかったが、ADKのログからモデルへの リクエストが2回行われたことは確認できた。これは、ツールを使うための モデル呼び出しと、ツール実行後の最終回答生成が行われたためだと考えられる。
+今回の比較から、ADKではエージェントの起動や対話部分をフレームワークが 用意してくれる一方、演習版ではエージェントのループやトレース表示を 自分で実装していることが分かった。
+また、どちらの実装でも、モデルが指示文とツールの説明をもとにツールを 選択している点は共通している。ADK版でも、make_quiz を含む同じツール群と INSTRUCTIONS を渡すことで、確認問題を生成できた。
+
