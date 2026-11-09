@@ -9,6 +9,8 @@
 エージェント = モデル + ループ + ツール。
 モデルは tools.py の関数を「ツール」として呼び出し、その結果を見て回答を作る。
 第5回では、同じツールを MCP サーバー（app/mcp_server.py）経由で受け取る。
+ユーザーが確認問題、復習問題、クイズを求めたら、必ず make_quiz を使う。
+その場合、get_lecture_summary ではなく make_quiz を優先する。
 """
 
 import argparse
@@ -41,6 +43,7 @@ INSTRUCTIONS = """\
 agent = Agent(instructions=INSTRUCTIONS)
 agent.tool_plain(tools.search_glossary)
 agent.tool_plain(tools.get_lecture_summary)
+agent.tool_plain(tools.make_quiz)
 
 # TODO(第3回 演習): tools.py に make_quiz を作り、ここで登録しよう
 
